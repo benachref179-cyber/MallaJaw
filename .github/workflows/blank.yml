@@ -40,8 +40,39 @@ jobs:
           );
 
           if (!src) {
-            console.error('ERROR: No index.html found after build.');
-            process.exit(1);
+            
+      - name: Build web app
+        run: npm run build
+
+      - name: Debug build output
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Project files:"
+          ls -la
+          echo "Searching for index.html:"
+          find . -maxdepth 5 -name index.html \
+            -not -path "./node_modules/*" \
+            -not -path "./.git/*" || true
+
+      - name: Prepare web assets
+        run: |
+          set -e
+          INDEX_FILE="$(find dist .vercel/output/static .output/public \
+            -maxdepth 5 -type f -name index.html 2>/dev/null | head -n 1 || true)"
+
+          if [ -z "$INDEX_FILE" ]; then
+            echo "ERROR: index.html was not generated."
+            echo "Check the Debug build output step above."
+            exit 1
+          fi
+
+          echo "Found: $INDEX_FILE"
+          mkdir -p www
+          cp -a "$(dirname "$INDEX_FILE")"/. www/
+          test -f www/index.html
+          echo "Web assets prepared successfully."
+
           }
 
           mkdirSync('www', { recursive: true });
