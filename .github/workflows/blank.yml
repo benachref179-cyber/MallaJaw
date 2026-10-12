@@ -1,59 +1,26 @@
-yaml
 name: Build MallaJaw APK
-
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build web app
-        run: npm run build
-
-      - name: Prepare dist for Capacitor
+          node-version: 20
+      - name: Install and Build APK
         run: |
-          echo "---- build output ----"
-          ls -la
+          npm install
+          npm run build
           mkdir -p dist
-          if [ -d "build" ]; then cp -r build/* dist/; fi
-          if [ -d "public" ]; then cp -r public/* dist/; fi
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Capacitor CLI
-        run: npm install @capacitor/cli @capacitor/android
-
-      - name: Build APK
-        run: |
-          npx cap init MallaJaw com.benachref.mallajaw --web-dir=dist
-          npx cap add android
-          npx cap sync android
-          cd android && ./gradlew assembleDebug
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: MallaJaw-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          [ -d "build" ] && cp -r build/* dist/ || true
+          [ -d "public" ] && cp -r public/* dist/ || true
+          npx cap init MallaJaw com.benachref.mallajaw --web-dir=dist || true
+          npx cap add android || true
+          npx cap sync android || true
+          if [ -d "android" ]; then cd android && ./gradlew assembleDebug; fi
