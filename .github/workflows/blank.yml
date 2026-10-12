@@ -1,12 +1,25 @@
-YAML
-name: Build MallaJaw APK
+name: Extract Project Files
 
 on:
   workflow_dispatch:
 
 jobs:
-  build:
+  extract:
     runs-on: ubuntu-latest
     steps:
-      - name: Test workflow
-        run: echo "MallaJaw workflow is working"
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unzip project
+        run: |
+          unzip -o mallajaw-navigation-fixed.zip -d extracted
+          cp -r extracted/* .
+          rm -rf extracted .grok mallajaw-navigation-fixed.zip
+
+      - name: Commit extracted files
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "Extract MallaJaw source files" || echo "No changes"
+          git push
