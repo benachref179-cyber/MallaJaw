@@ -2,14 +2,14 @@
 name: Build MallaJaw APK
 
 on:
-  workflow_dispatch:
+  workflow_dispatch
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -23,62 +23,27 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Prepare web assets
-        run: |
-          node --input-type=module <<'NODE'
-          import { cpSync, existsSync, mkdirSync } from 'node:fs';
-
-          const roots = [
-            'dist',
-            'dist/client',
-            '.vercel/output/static',
-            '.output/public'
-          ];
-
-          const src = roots.find(
-            path => existsSync(`${path}/index.html`)
-          );
-
-          if (!src) {
-            
-      - name: Build web app
-        run: npm run build
-
-      - name: Debug build output
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Project files:"
-          ls -la
-          echo "Searching for index.html:"
-          find . -maxdepth 5 -name index.html \
-            -not -path "./node_modules/*" \
-            -not -path "./.git/*" || true
-
-      - name: Prepare web assets
+      - name: Find index.html
+        shell: bash
         run: |
           set -e
+          echo "Searching for index.html..."
+          find . -maxdepth 6 -type f -name index.html \
+            -not -path "./node_modules/*" \
+            -not -path "./.git/*"
+
           INDEX_FILE="$(find dist .vercel/output/static .output/public \
-            -maxdepth 5 -type f -name index.html 2>/dev/null | head -n 1 || true)"
+            -maxdepth 6 -type f -name index.html \
+            2>/dev/null | head -n 1 || true)"
 
           if [ -z "$INDEX_FILE" ]; then
-            echo "ERROR: index.html was not generated."
-            echo "Check the Debug build output step above."
+            echo "ERROR: No index.html found."
             exit 1
           fi
 
-          echo "Found: $INDEX_FILE"
           mkdir -p www
           cp -a "$(dirname "$INDEX_FILE")"/. www/
           test -f www/index.html
-          echo "Web assets prepared successfully."
-
-          }
-
-          mkdirSync('www', { recursive: true });
-          cpSync(src, 'www', { recursive: true });
-          console.log(`Web assets copied from ${src}`);
-          NODE
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -92,7 +57,9 @@ jobs:
       - name: Setup Capacitor
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init MallaJaw com.mallajaw.app --web-dir www
+          if [ ! -f capacitor.config.ts ] && [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.js ]; then
+            npx cap init MallaJaw com.mallajaw.app --web-dir www
+          fi
           npx cap add android
           npx cap sync android
 
