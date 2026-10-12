@@ -3,20 +3,16 @@ name: Build MallaJaw APK
 on:
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Install dependencies
         run: npm install
@@ -24,27 +20,39 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - name: Prepare dist for Capacitor
+        run: |
+          if [ ! -f .output/public/index.html ]; then
+            echo "index.html not in .output/public"
+            find .output -name 'index.html' -o -type d | head -80
+            exit 1
+          fi
+          rm -rf dist
+          mkdir -p dist
+          cp -a .output/public/. dist/
+
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
+      - uses: android-actions/setup-android@v3
+
       - name: Install Capacitor
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init MallaJaw com.mallajaw.app --web-dir dist || true
-          npx cap add android || true
+          npx cap init MallaJaw com.mallajaw.app --web-dir dist
+          npx cap add android
           npx cap sync android
 
       - name: Build APK
+        working-directory: android
         run: |
-          cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: MallaJaw-APK
           path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
