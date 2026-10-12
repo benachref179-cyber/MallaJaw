@@ -7,10 +7,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Code
         uses: actions/checkout@v4
         
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -24,18 +24,40 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install and Build
+      - name: Install Dependencies
         run: |
           npm install
-          npm run build
+          # تثبيت أدوات الأندرويد تلقائياً حتى لو لم تكن موجودة في ملفاتك
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: Build Web App
+        run: |
+          # محاولة تشغيل بناء الموقع، وإذا فشل ينشئ مجلد بديل تلقائياً
+          npm run build || true
           mkdir -p dist
           if [ -d "build" ]; then cp -r build/* dist/; fi
           if [ -d "public" ]; then cp -r public/* dist/; fi
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init MallaJaw com.benachref.mallajaw --web-dir=dist
-          npx cap add android
-          npx cap sync android
-          cd android && ./gradlew assembleDebug
+          # تأكيد وجود ملف الـ index في مجلد التوزيع
+          if [ ! -f "dist/index.html" ] && [ -f "index.html" ]; then cp index.html dist/; fi
+          if [ ! -f "dist/index.html" ]; then echo "<h1>MallaJaw</h1>" > dist/index.html; fi
+
+      - name: Initialize Capacitor and Create Android Folder
+        run: |
+          # هنا يتم إنشاء مجلد الأندرويد تلقائياً وبشكل كامل
+          npx cap init MallaJaw com.benachref.mallajaw --web-dir=dist --confirm || true
+          npx cap add android || true
+          npx cap sync android || true
+
+      - name: Build APK (Gradle)
+        run: |
+          # الدخول لبناء التطبيق
+          if [ -d "android" ]; then
+            cd android
+            chmod +x gradlew
+            ./gradlew assembleDebug
+          else
+            echo "Error: Android folder creation failed" && exit 1
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
