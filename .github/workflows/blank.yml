@@ -1,3 +1,4 @@
+
 name: Build MallaJaw APK
 
 on:
@@ -6,38 +7,72 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - name: Install dependencies
         run: npm install
 
       - name: Build web app
-        run: npx vite build
+        run: npm run build
 
-      - name: Prepare dist for Capacitor
-        run: node --input-type=module -e 'import{cpSync,existsSync,readdirSync}from"node:fs";const roots=[".vercel/output/static",".output/public","dist/client"];let src="";for(const r of roots){if(existsSync(r+"/index.html")){src=r;break}}if(!src){console.log("no index.html");for(const r of [".vercel",".output","dist"]){console.log(r, existsSync(r)?readdirSync(r).slice(0,20).join(","):"missing")}process.exit(1)}cpSync(src,"www",{recursive:true});console.log("copied "+src)'
+      - name: Prepare web assets
+        run: |
+          node --input-type=module <<'NODE'
+          import { cpSync, existsSync, mkdirSync } from 'node:fs';
 
-      - uses: actions/setup-java@v4
+          const roots = [
+            'dist',
+            'dist/client',
+            '.vercel/output/static',
+            '.output/public'
+          ];
+
+          const src = roots.find(
+            path => existsSync(`${path}/index.html`)
+          );
+
+          if (!src) {
+            console.error('ERROR: No index.html found after build.');
+            process.exit(1);
+          }
+
+          mkdirSync('www', { recursive: true });
+          cpSync(src, 'www', { recursive: true });
+          console.log(`Web assets copied from ${src}`);
+          NODE
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: '17'
 
-      - uses: android-actions/setup-android@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Install Capacitor
-        run: npm install @capacitor/core @capacitor/cli @capacitor/android && npx cap init MallaJaw com.mallajaw.app --web-dir www && npx cap add android && npx cap sync android
+      - name: Setup Capacitor
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init MallaJaw com.mallajaw.app --web-dir www
+          npx cap add android
+          npx cap sync android
 
       - name: Build APK
         working-directory: android
-        run: chmod +x gradlew && ./gradlew assembleDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
           name: MallaJaw-APK
           path: android/app/build/outputs/apk/debug/*.apk
