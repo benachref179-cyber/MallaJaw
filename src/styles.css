@@ -1,0 +1,81 @@
+@import "@fontsource/cairo/arabic-400.css";
+@import "@fontsource/cairo/arabic-600.css";
+@import "@fontsource/cairo/arabic-700.css";
+@import "@fontsource/cairo/arabic-800.css";
+@import "@fontsource/cairo/latin-400.css";
+@import "@fontsource/cairo/latin-600.css";
+@import "@fontsource/cairo/latin-700.css";
+@import "@fontsource/cairo/latin-800.css";
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #000000;
+  --color-ink: #f4f4f5;
+  --color-muted: #8d8d93;
+  --color-accent: #fe2c55;
+  --color-panel: #141414;
+  --color-panel-2: #1f1f1f;
+  --color-line: #2c2c2c;
+  --font-sans: "Cairo", "Segoe UI", sans-serif;
+  --radius-card: 1rem;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  ::selection {
+    background: var(--color-accent);
+    color: var(--color-ink);
+  }
+}
+
+@keyframes mj-speak {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.mj-speak {
+  animation: mj-speak 1.15s ease-in-out infinite;
+}
+
+.mj-scroll {
+  scrollbar-width: none;
+}
+.mj-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.mj-tabbar {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mj-speak {
+    animation: none;
+  }
+}
