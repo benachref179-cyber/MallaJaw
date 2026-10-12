@@ -22,14 +22,28 @@ jobs:
 
       - name: Prepare dist for Capacitor
         run: |
-          if [ ! -f .output/public/index.html ]; then
-            echo "index.html not in .output/public"
-            find .output -name 'index.html' -o -type d | head -80
+          echo "---- build output ----"
+          find .vercel .output dist -name 'index.html' -o -name '*.html' 2>/dev/null | head -80 || true
+          WEB=""
+          for c in .vercel/output/static .output/public dist/client; do
+            if [ -f "$c/index.html" ]; then WEB="$c"; break; fi
+          done
+          if [ -z "$WEB" ]; then
+            HTML=$(find .vercel .output dist -name 'index.html' -print -quit 2>/dev/null || true)
+            if [ -n "\( HTML" ]; then WEB= \)(dirname "$HTML"); fi
+          fi
+          if [ -z "$WEB" ]; then
+            echo "No index.html produced by the web build"
             exit 1
           fi
+          echo "Using $WEB"
+          rm -rf /tmp/www
+          mkdir -p /tmp/www
+          cp -a "$WEB"/. /tmp/www/
           rm -rf dist
           mkdir -p dist
-          cp -a .output/public/. dist/
+          cp -a /tmp/www/. dist/
+          test -f dist/index.html
 
       - uses: actions/setup-java@v4
         with:
