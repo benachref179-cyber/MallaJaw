@@ -21,41 +21,7 @@ jobs:
         run: npx vite build
 
       - name: Prepare dist for Capacitor
-        run: node --input-type=module <<'END'
-import { cpSync, existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
-
-const roots = [".vercel/output/static", ".output/public", "dist/client"];
-let src = "";
-for (const r of roots) {
-  if (existsSync(join(r, "index.html"))) {
-    src = r;
-    break;
-  }
-}
-
-function walk(dir, acc, depth) {
-  if (depth > 3 || acc.length > 40) return;
-  let entries = [];
-  try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
-  for (const e of entries) {
-    if (e.name === "node_modules" || e.name === ".git") continue;
-    const p = join(dir, e.name);
-    if (e.isDirectory()) walk(p, acc, depth + 1);
-    else if (e.name.endsWith(".html")) acc.push(p);
-  }
-}
-
-if (!src) {
-  const found = [];
-  walk(".", found, 0);
-  console.log(found.join("\n") || "no html files");
-  process.exit(1);
-}
-
-cpSync(src, "www", { recursive: true });
-console.log("copied " + src);
-END
+        run: node --input-type=module -e 'import{cpSync,existsSync,readdirSync}from"node:fs";const roots=[".vercel/output/static",".output/public","dist/client"];let src="";for(const r of roots){if(existsSync(r+"/index.html")){src=r;break}}if(!src){console.log("no index.html");for(const r of [".vercel",".output","dist"]){console.log(r, existsSync(r)?readdirSync(r).slice(0,20).join(","):"missing")}process.exit(1)}cpSync(src,"www",{recursive:true});console.log("copied "+src)'
 
       - uses: actions/setup-java@v4
         with:
@@ -65,17 +31,11 @@ END
       - uses: android-actions/setup-android@v3
 
       - name: Install Capacitor
-        run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init MallaJaw com.mallajaw.app --web-dir www
-          npx cap add android
-          npx cap sync android
+        run: npm install @capacitor/core @capacitor/cli @capacitor/android && npx cap init MallaJaw com.mallajaw.app --web-dir www && npx cap add android && npx cap sync android
 
       - name: Build APK
         working-directory: android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug
+        run: chmod +x gradlew && ./gradlew assembleDebug
 
       - uses: actions/upload-artifact@v4
         with:
