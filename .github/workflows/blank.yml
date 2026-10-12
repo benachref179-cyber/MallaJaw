@@ -23,7 +23,23 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Find index.html
+      - name: Inspect build output
+        run: |
+          echo "=== Root files ==="
+          ls -la
+          echo "=== Build directories ==="
+          for d in dist .vercel/output .output; do
+            if [ -d "$d" ]; then
+              echo "--- $d ---"
+              find "$d" -maxdepth 4 -type f | head -100
+            fi
+          done
+          echo "=== index.html files ==="
+          find . -maxdepth 6 -type f -name index.html \
+            -not -path "./node_modules/*" \
+            -not -path "./.git/*" || true
+
+
         shell: bash
         run: |
           set -e
